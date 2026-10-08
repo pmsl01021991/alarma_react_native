@@ -1,6 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { router } from "expo-router";
+import WakeAlarm from "react-native-wake-alarm";
 
 const ALARMS_KEY = "@alarma_react_native_alarms";
 
@@ -14,19 +14,11 @@ type Alarm = {
 };
 
 export default function AlarmScheduler() {
-  const lastTriggered = useRef<string | null>(null);
-
   useEffect(() => {
-    checkAlarms();
-
-    const interval = setInterval(() => {
-      checkAlarms();
-    }, 1000);
-
-    return () => clearInterval(interval);
+    syncAlarms();
   }, []);
 
-  async function checkAlarms() {
+  async function syncAlarms() {
     try {
       const data = await AsyncStorage.getItem(ALARMS_KEY);
 
@@ -36,43 +28,35 @@ export default function AlarmScheduler() {
 
       const alarms: Alarm[] = JSON.parse(data);
 
-      const now = new Date();
+      await WakeAlarm.cancelAll();
 
-      const hour = now.getHours();
-      const minute = now.getMinutes();
+      for (const alarm of alarms) {
+        if (!alarm.enabled) {
+          continue;
+        }
 
-      // JS: domingo = 0
-      // Nuestra aplicación: lunes = 0
-      const today = (now.getDay() + 6) % 7;
+        const days = alarm.days.map(
+          (day) => (day + 1) as 1 | 2 | 3 | 4 | 5 | 6 | 7
+        );
 
-      const currentKey =
-        `${now.getFullYear()}-` +
-        `${now.getMonth()}-` +
-        `${now.getDate()}-` +
-        `${hour}-` +
-        `${minute}`;
+        const result = await WakeAlarm.schedule({
+          id: alarm.id,
+          hour: alarm.hour,
+          minute: alarm.minute,
+          days,
+          title: alarm.label || "Alarma",
+          body: "¡Es hora de despertar!",
+          sound: "alarm",
+          vibrate: true,
+        });
 
-      const alarm = alarms.find(
-        (item) =>
-          item.enabled &&
-          item.hour === hour &&
-          item.minute === minute &&
-          item.days.includes(today)
-      );
-
-      if (!alarm) {
-        return;
+        console.log(
+          `Alarma ${alarm.id}:`,
+          result
+        );
       }
-
-      if (lastTriggered.current === currentKey) {
-        return;
-      }
-
-      lastTriggered.current = currentKey;
-
-      router.replace("/alarma");
     } catch (error) {
-      console.log("Error revisando alarmas:", error);
+      console.log("Error programando alarmas:", error);
     }
   }
 

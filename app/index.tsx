@@ -4,6 +4,7 @@ import { SafeAreaView, useSafeAreaInsets,} from "react-native-safe-area-context"
 import { router, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "../context/ThemeContext";
+import WakeAlarm from "react-native-wake-alarm";
 
 const ALARMS_KEY = "@alarma_react_native_alarms";
 
@@ -45,33 +46,46 @@ export default function Index() {
 
   async function toggleAlarm(id: string, value: boolean) {
     const updated = alarms.map((alarm) =>
-      alarm.id === id
-        ? {
-            ...alarm,
-            enabled: value,
-          }
-        : alarm
+      alarm.id === id ? { ...alarm, enabled: value } : alarm
     );
+
+    const alarm = updated.find((item) => item.id === id);
 
     setAlarms(updated);
+    await AsyncStorage.setItem(ALARMS_KEY, JSON.stringify(updated));
 
-    await AsyncStorage.setItem(
-      ALARMS_KEY,
-      JSON.stringify(updated)
+    if (!alarm) return;
+
+    if (!value) {
+      await WakeAlarm.cancel(id);
+      return;
+    }
+
+    const days = alarm.days.map(
+      (day) => (day + 1) as 1 | 2 | 3 | 4 | 5 | 6 | 7
     );
+
+    const result = await WakeAlarm.schedule({
+      id: alarm.id,
+      hour: alarm.hour,
+      minute: alarm.minute,
+      days,
+      title: alarm.label || "Alarma",
+      body: "¡Es hora de despertar!",
+      sound: "alarm",
+      vibrate: true,
+    });
+
+    console.log("Alarma activada:", result);
   }
 
   async function deleteAlarm(id: string) {
-    const updated = alarms.filter(
-      (alarm) => alarm.id !== id
-    );
+    const updated = alarms.filter((alarm) => alarm.id !== id);
 
     setAlarms(updated);
+    await AsyncStorage.setItem(ALARMS_KEY, JSON.stringify(updated));
 
-    await AsyncStorage.setItem(
-      ALARMS_KEY,
-      JSON.stringify(updated)
-    );
+    await WakeAlarm.cancel(id);
   }
 
   return (

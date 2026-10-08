@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Pressable, SafeAreaView, ScrollView, Text, TextInput, View,} from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
+import WakeAlarm from "react-native-wake-alarm";
 
 const DAYS = [
   { short: "L", name: "Lunes" },
@@ -117,55 +118,83 @@ export default function Configurar() {
 
   async function saveAlarm() {
     try {
-        const data = await AsyncStorage.getItem(
+      const data = await AsyncStorage.getItem(
         "@alarma_react_native_alarms"
-        );
+      );
 
-        const existingAlarms = data
+      const existingAlarms = data
         ? JSON.parse(data)
         : [];
 
-        if (alarmId) {
+      let savedAlarm;
+
+      if (alarmId) {
         const updatedAlarms = existingAlarms.map(
-            (alarm: any) =>
+          (alarm: any) =>
             alarm.id === alarmId
-                ? {
-                    ...alarm,
-                    hour,
-                    minute,
-                    days: selectedDays,
-                    label: label.trim() || "Alarma",
+              ? {
+                  ...alarm,
+                  hour,
+                  minute,
+                  days: selectedDays,
+                  label: label.trim() || "Alarma",
                 }
-                : alarm
+              : alarm
+        );
+
+        savedAlarm = updatedAlarms.find(
+          (alarm: any) => alarm.id === alarmId
         );
 
         await AsyncStorage.setItem(
-            "@alarma_react_native_alarms",
-            JSON.stringify(updatedAlarms)
+          "@alarma_react_native_alarms",
+          JSON.stringify(updatedAlarms)
         );
-        } else {
-        const newAlarm = {
-            id: Date.now().toString(),
-            hour,
-            minute,
-            days: selectedDays,
-            label: label.trim() || "Alarma",
-            enabled: true,
+      } else {
+        savedAlarm = {
+          id: Date.now().toString(),
+          hour,
+          minute,
+          days: selectedDays,
+          label: label.trim() || "Alarma",
+          enabled: true,
         };
 
-        existingAlarms.push(newAlarm);
+        existingAlarms.push(savedAlarm);
 
         await AsyncStorage.setItem(
-            "@alarma_react_native_alarms",
-            JSON.stringify(existingAlarms)
+          "@alarma_react_native_alarms",
+          JSON.stringify(existingAlarms)
         );
-        }
+      }
 
-        router.back();
+      await WakeAlarm.cancel(savedAlarm.id);
+
+      if (savedAlarm.enabled) {
+        const days = savedAlarm.days.map(
+          (day: number) =>
+            (day + 1) as 1 | 2 | 3 | 4 | 5 | 6 | 7
+        );
+
+        const result = await WakeAlarm.schedule({
+          id: savedAlarm.id,
+          hour: savedAlarm.hour,
+          minute: savedAlarm.minute,
+          days,
+          title: savedAlarm.label,
+          body: "¡Es hora de despertar!",
+          sound: "alarm",
+          vibrate: true,
+        });
+
+        console.log("Resultado de programación:", result);
+      }
+
+      router.back();
     } catch (error) {
-        console.log("Error guardando alarma:", error);
+      console.log("Error guardando alarma:", error);
     }
-    }
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-[#0B0F12]">
