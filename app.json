@@ -48,7 +48,13 @@
         "expo-notifications",
         {
           "sounds": [
-            "./assets/sounds/alarm.mp3"
+            "./assets/sounds/alarm.mp3",
+            "./assets/sounds/alarm2.mp3",
+            "./assets/sounds/alarm3.mp3",
+            "./assets/sounds/alarm4.mp3",
+            "./assets/sounds/alarm5.mp3",
+            "./assets/sounds/alarm6.mp3",
+            "./assets/sounds/alarm7.mp3"
           ]
         }
       ],

@@ -15,6 +15,7 @@ type Alarm = {
   days: number[];
   label: string;
   enabled: boolean;
+  sound?: string;
 };
 
 export default function Index() {
@@ -72,7 +73,7 @@ export default function Index() {
       days,
       title: alarm.label || "Alarma",
       body: "¡Es hora de despertar!",
-      sound: "alarm",
+      sound: alarm.sound || "alarm",
       vibrate: true,
     });
 

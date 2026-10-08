@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Pressable, SafeAreaView, ScrollView, Text, TextInput, View,} from "react-native";
+import { Modal, Pressable, SafeAreaView, ScrollView, Text, TextInput, View,} from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import WakeAlarm from "react-native-wake-alarm";
+import { useAudioPlayer } from "expo-audio";
 
 const DAYS = [
   { short: "L", name: "Lunes" },
@@ -12,6 +13,44 @@ const DAYS = [
   { short: "V", name: "Viernes" },
   { short: "S", name: "Sábado" },
   { short: "D", name: "Domingo" },
+];
+
+const SOUNDS = [
+  {
+    id: "alarm",
+    name: "Alarma 1",
+    source: require("../assets/sounds/alarm.mp3"),
+  },
+  {
+    id: "alarm2",
+    name: "Alarma 2",
+    source: require("../assets/sounds/alarm2.mp3"),
+  },
+  {
+    id: "alarm3",
+    name: "Alarma 3",
+    source: require("../assets/sounds/alarm3.mp3"),
+  },
+  {
+    id: "alarm4",
+    name: "Alarma 4",
+    source: require("../assets/sounds/alarm4.mp3"),
+  },
+  {
+    id: "alarm5",
+    name: "Alarma 5",
+    source: require("../assets/sounds/alarm5.mp3"),
+  },
+  {
+    id: "alarm6",
+    name: "Alarma 6",
+    source: require("../assets/sounds/alarm6.mp3"),
+  },
+  {
+    id: "alarm7",
+    name: "Alarma 7",
+    source: require("../assets/sounds/alarm7.mp3"),
+  },
 ];
 
 export default function Configurar() {
@@ -32,6 +71,10 @@ export default function Configurar() {
     4,
   ]);
   const [label, setLabel] = useState("Despertar");
+  const [sound, setSound] = useState("alarm");
+  const [soundModalVisible, setSoundModalVisible] = useState(false);
+  const [playingSound, setPlayingSound] = useState<string | null>(null);
+  const previewPlayer = useAudioPlayer(SOUNDS[0].source);
 
   useEffect(() => {
     if (!alarmId) {
@@ -40,6 +83,15 @@ export default function Configurar() {
 
     loadAlarm();
     }, [alarmId]);
+
+    useEffect(() => {
+      return () => {
+        try {
+          previewPlayer.pause();
+          previewPlayer.seekTo(0);
+        } catch {}
+      };
+    }, []);
 
   async function loadAlarm() {
     try {
@@ -69,6 +121,7 @@ export default function Configurar() {
 
        setSelectedDays(alarm.days);
        setLabel(alarm.label);
+       setSound(alarm.sound || "alarm");
     } catch (error) {
         console.log("Error cargando alarma:", error);
     }
@@ -116,6 +169,41 @@ export default function Configurar() {
     });
     }
 
+    function stopPreview() {
+      try {
+        previewPlayer.pause();
+        previewPlayer.seekTo(0);
+      } catch (error) {
+        console.log("Error deteniendo preview:", error);
+      }
+
+      setPlayingSound(null);
+    }
+
+    function togglePreview(soundId: string) {
+      const selectedSound = SOUNDS.find((item) => item.id === soundId);
+
+      if (!selectedSound) {
+        return;
+      }
+
+      if (playingSound === soundId) {
+        stopPreview();
+        return;
+      }
+
+      try {
+        previewPlayer.pause();
+        previewPlayer.seekTo(0);
+        previewPlayer.replace(selectedSound.source);
+        previewPlayer.play();
+
+        setPlayingSound(soundId);
+      } catch (error) {
+        console.log("Error reproduciendo sonido:", error);
+      }
+    }
+
   async function saveAlarm() {
     try {
       const data = await AsyncStorage.getItem(
@@ -138,6 +226,7 @@ export default function Configurar() {
                   minute,
                   days: selectedDays,
                   label: label.trim() || "Alarma",
+                  sound,
                 }
               : alarm
         );
@@ -157,6 +246,7 @@ export default function Configurar() {
           minute,
           days: selectedDays,
           label: label.trim() || "Alarma",
+          sound,
           enabled: true,
         };
 
@@ -183,7 +273,7 @@ export default function Configurar() {
           days,
           title: savedAlarm.label,
           body: "¡Es hora de despertar!",
-          sound: "alarm",
+          sound: savedAlarm.sound || "alarm",
           vibrate: true,
         });
 
@@ -425,27 +515,34 @@ export default function Configurar() {
 
         {/* SONIDO */}
 
-        <View className="mt-8 px-6">
-          <Text className="mb-4 text-lg font-bold text-white">
-            Sonido
-          </Text>
-
-          <View className="flex-row items-center justify-between rounded-3xl bg-[#151B1F] p-5">
-            <View>
-              <Text className="text-base font-semibold text-white">
-                Sonido de alarma
-              </Text>
-
-              <Text className="mt-1 text-sm text-gray-500">
-                Sonido predeterminado
-              </Text>
-            </View>
-
-            <Text className="text-2xl text-gray-400">
-              ›
+          <View className="mt-8 px-6">
+            <Text className="mb-4 text-lg font-bold text-white">
+              Sonido
             </Text>
+
+            <Pressable
+              onPress={() => {
+                stopPreview();
+                setSoundModalVisible(true);
+              }}
+              className="flex-row items-center justify-between rounded-3xl bg-[#151B1F] p-5"
+            >
+              <View>
+                <Text className="text-base font-semibold text-white">
+                  Sonido de alarma
+                </Text>
+
+                <Text className="mt-1 text-sm text-gray-500">
+                  {SOUNDS.find((item) => item.id === sound)?.name ||
+                    "Alarma 1"}
+                </Text>
+              </View>
+
+              <Text className="text-2xl text-gray-400">
+                ›
+              </Text>
+            </Pressable>
           </View>
-        </View>
 
         {/* GUARDAR */}
 
@@ -460,6 +557,92 @@ export default function Configurar() {
           </Pressable>
         </View>
       </ScrollView>
+
+      <Modal
+        visible={soundModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          stopPreview();
+          setSoundModalVisible(false);
+        }}
+      >
+        <View className="flex-1 justify-end bg-black/70">
+          <View className="rounded-t-3xl bg-[#151B1F] px-6 pb-8 pt-6">
+            <View className="mb-6 flex-row items-center justify-between">
+              <Text className="text-2xl font-bold text-white">
+                Elegir sonido
+              </Text>
+
+              <Pressable
+                onPress={() => {
+                  stopPreview();
+                  setSoundModalVisible(false);
+                }}
+                className="h-10 w-10 items-center justify-center rounded-full bg-[#252C31]"
+              >
+                <Text className="text-xl text-white">
+                  ✕
+                </Text>
+              </Pressable>
+            </View>
+
+            {SOUNDS.map((item) => {
+              const selected = sound === item.id;
+              const playing = playingSound === item.id;
+
+              return (
+                <View
+                  key={item.id}
+                  className="mb-3 flex-row items-center rounded-2xl bg-[#252C31] p-4"
+                >
+                  <Pressable
+                    onPress={() => {
+                      stopPreview();
+                      setSound(item.id);
+                      setSoundModalVisible(false);
+                    }}
+                    className="flex-1 flex-row items-center"
+                  >
+                    <Text className="mr-3 text-xl">
+                      🔊
+                    </Text>
+
+                    <Text className="flex-1 text-base font-semibold text-white">
+                      {item.name}
+                    </Text>
+
+                    {selected && (
+                      <Text className="mr-3 text-xl text-[#B8A7FF]">
+                        ✓
+                      </Text>
+                    )}
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => togglePreview(item.id)}
+                    className={`h-11 w-11 items-center justify-center rounded-full ${
+                      playing
+                        ? "bg-[#B8A7FF]"
+                        : "bg-[#171D21]"
+                    }`}
+                  >
+                    <Text
+                      className={`text-lg ${
+                        playing
+                          ? "text-[#171226]"
+                          : "text-white"
+                      }`}
+                    >
+                      {playing ? "Ⅱ" : "▶"}
+                    </Text>
+                  </Pressable>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

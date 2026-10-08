@@ -10,6 +10,7 @@ type Alarm = {
   minute: number;
   days: number[];
   label: string;
+  sound?: string;
   enabled: boolean;
 };
 
@@ -44,7 +45,7 @@ export default function AlarmScheduler() {
           days,
           title: alarm.label || "Alarma",
           body: "¡Es hora de despertar!",
-          sound: "alarm",
+          sound: alarm.sound || "alarm",
           vibrate: true,
         });
 
