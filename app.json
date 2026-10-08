@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "alarma divertida",
-    "slug": "alarma divertida",
+    "slug": "alarma_react_native",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icono_de_alarma.png",

@@ -28,8 +28,6 @@ export default function AlarmScheduler() {
 
       const alarms: Alarm[] = JSON.parse(data);
 
-      await WakeAlarm.cancelAll();
-
       for (const alarm of alarms) {
         if (!alarm.enabled) {
           continue;

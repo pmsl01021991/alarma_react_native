@@ -187,7 +187,15 @@ export default function Configurar() {
           vibrate: true,
         });
 
-        console.log("Resultado de programación:", result);
+        if (result.status === "failed") {
+          console.log("No se pudo programar la alarma:", result);
+
+          await WakeAlarm.cancel(savedAlarm.id);
+
+          return;
+        }
+
+        console.log("Alarma programada correctamente:", result);
       }
 
       router.back();
